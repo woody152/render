@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import Set
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 logging.basicConfig(level=logging.INFO)
@@ -48,7 +47,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# 存储最新的数据（可选，用于新连接获取历史数据）
+# 存储最新的数据（全局变量）
 latest_data = None
 
 @app.get("/")
@@ -189,7 +188,6 @@ async def get():
 			const maxReconnectAttempts = 5;
 			
 			function connect() {
-				// 使用wss协议（生产环境）或ws协议（本地开发）
 				const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 				const wsUrl = `${protocol}//${window.location.host}/ws`;
 				
@@ -217,7 +215,6 @@ async def get():
 					document.getElementById('status').textContent = '❌ 连接断开，尝试重连...';
 					document.getElementById('status').className = 'disconnected';
 					
-					// 自动重连
 					if (reconnectAttempts < maxReconnectAttempts) {
 						reconnectAttempts++;
 						setTimeout(connect, 3000 * reconnectAttempts);
@@ -232,20 +229,17 @@ async def get():
 			}
 			
 			function updateUI(data) {
-				// 更新时间
 				document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
 				document.getElementById('msg-count').textContent = messageCount;
 				
 				if (data.type === 'dataframe') {
 					const df = data.data;
 					
-					// 更新统计
 					if (df.length > 0) {
 						document.getElementById('row-count').textContent = df.length;
 						document.getElementById('col-count').textContent = Object.keys(df[0]).length;
 					}
 					
-					// 构建表格
 					if (df.length === 0) {
 						document.getElementById('data-container').innerHTML = 
 							'<div style="text-align: center; padding: 40px; color: #999;">暂无数据</div>';
@@ -260,7 +254,6 @@ async def get():
 					});
 					html += '</tr></thead><tbody>';
 					
-					// 只显示最近的50行，避免DOM过大
 					const displayData = df.slice(-50);
 					displayData.forEach(row => {
 						html += '<tr>';
@@ -295,7 +288,6 @@ async def get():
 				return div.innerHTML;
 			}
 			
-			// 启动连接
 			connect();
 		</script>
 	</body>
@@ -308,21 +300,22 @@ async def websocket_endpoint(websocket: WebSocket):
 	await manager.connect(websocket)
 	try:
 		# 如果有历史数据，立即发送给新连接的客户端
-		if latest_data:
+		global latest_data
+		if latest_data is not None:
 			await websocket.send_text(json.dumps({
 				"type": "dataframe",
 				"data": latest_data
 			}))
 		
 		while True:
-			# 接收来自客户端的消息（这里主要是本地数据发送端）
+			# 接收来自客户端的消息
 			data = await websocket.receive_text()
 			try:
 				parsed = json.loads(data)
 				
 				# 如果是数据帧更新
 				if parsed.get("type") == "dataframe":
-					# 存储最新数据
+					# 更新全局变量
 					global latest_data
 					latest_data = parsed.get("data", [])
 					# 广播给所有连接的浏览器客户端
@@ -331,7 +324,7 @@ async def websocket_endpoint(websocket: WebSocket):
 						"data": latest_data
 					}))
 				else:
-					# 其他类型的消息直接回显或处理
+					# 其他类型的消息
 					await websocket.send_text(f"Received: {data}")
 					
 			except json.JSONDecodeError:
@@ -343,6 +336,11 @@ async def websocket_endpoint(websocket: WebSocket):
 	except Exception as e:
 		logger.error(f"WebSocket error: {e}")
 		manager.disconnect(websocket)
+
+# 健康检查端点
+@app.get("/health")
+async def health():
+	return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 if __name__ == "__main__":
 	uvicorn.run(app, host="0.0.0.0", port=10000)
