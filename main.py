@@ -297,10 +297,12 @@ async def get():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+	# 第一步：声明使用全局变量（必须在函数最开始）
+	global latest_data
+	
 	await manager.connect(websocket)
 	try:
-		# 如果有历史数据，立即发送给新连接的客户端
-		global latest_data
+		# 发送历史数据
 		if latest_data is not None:
 			await websocket.send_text(json.dumps({
 				"type": "dataframe",
@@ -315,8 +317,7 @@ async def websocket_endpoint(websocket: WebSocket):
 				
 				# 如果是数据帧更新
 				if parsed.get("type") == "dataframe":
-					# 更新全局变量
-					global latest_data
+					# 更新全局变量（不需要再声明global，因为已经在函数开头声明了）
 					latest_data = parsed.get("data", [])
 					# 广播给所有连接的浏览器客户端
 					await manager.broadcast(json.dumps({
@@ -341,6 +342,11 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.get("/health")
 async def health():
 	return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+# 测试端点
+@app.get("/test")
+async def test():
+	return {"status": "ok", "message": "Service is running"}
 
 if __name__ == "__main__":
 	uvicorn.run(app, host="0.0.0.0", port=10000)
