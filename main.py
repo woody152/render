@@ -108,6 +108,16 @@ async def get():
 			table tr:hover {
 				background: #f5f5f5;
 			}
+			.bool-true {
+				color: #28a745;
+				font-weight: bold;
+				font-size: 18px;
+			}
+			.bool-false {
+				color: #dc3545;
+				font-weight: bold;
+				font-size: 18px;
+			}
 			#stats {
 				display: flex;
 				gap: 20px;
@@ -227,14 +237,26 @@ async def get():
 						html += '<tr>';
 						columns.forEach(col => {
 							let value = row[col];
-							if (value === null || value === undefined) {
-								value = '-';
+							let displayValue;
+							
+							// 处理布尔值 - 显示带颜色的勾叉符号
+							if (typeof value === 'boolean') {
+								if (value === true) {
+									displayValue = '<span class="bool-true">✓</span>';
+								} else {
+									displayValue = '<span class="bool-false">✗</span>';
+								}
+							} else if (value === null || value === undefined) {
+								displayValue = '-';
 							} else if (typeof value === 'number') {
-								value = value.toFixed(2);
+								displayValue = value.toFixed(2);
 							} else if (typeof value === 'object') {
-								value = JSON.stringify(value);
+								displayValue = JSON.stringify(value);
+							} else {
+								displayValue = escapeHtml(String(value));
 							}
-							html += `<td>${escapeHtml(String(value))}</td>`;
+							
+							html += `<td>${displayValue}</td>`;
 						});
 						html += '</tr>';
 					});
