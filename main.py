@@ -1,18 +1,13 @@
 import asyncio
 import json
-import logging
 from datetime import datetime
 from typing import Set
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 import uvicorn
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 app = FastAPI()
 
-# 存储所有活跃的WebSocket连接
 class ConnectionManager:
 	def __init__(self):
 		self.active_connections: Set[WebSocket] = set()
@@ -20,14 +15,11 @@ class ConnectionManager:
 	async def connect(self, websocket: WebSocket):
 		await websocket.accept()
 		self.active_connections.add(websocket)
-		logger.info(f"New connection. Total: {len(self.active_connections)}")
 	
 	def disconnect(self, websocket: WebSocket):
 		self.active_connections.discard(websocket)
-		logger.info(f"Connection closed. Total: {len(self.active_connections)}")
 	
 	async def broadcast(self, message: str):
-		"""广播消息给所有连接的客户端"""
 		if not self.active_connections:
 			return
 		
@@ -37,17 +29,13 @@ class ConnectionManager:
 				await connection.send_text(message)
 			except WebSocketDisconnect:
 				disconnected.append(connection)
-			except Exception as e:
-				logger.error(f"Error sending message: {e}")
+			except:
 				disconnected.append(connection)
 		
-		# 清理断开的连接
 		for conn in disconnected:
 			self.disconnect(conn)
 
 manager = ConnectionManager()
-
-# 存储最新的数据（全局变量）
 latest_data = None
 
 @app.get("/")
@@ -96,6 +84,8 @@ async def get():
 			#data-container {
 				margin-top: 20px;
 				overflow-x: auto;
+				max-height: 600px;
+				overflow-y: auto;
 			}
 			table {
 				width: 100%;
@@ -105,14 +95,14 @@ async def get():
 			table th {
 				background: #4CAF50;
 				color: white;
-				padding: 12px;
+				padding: 10px;
 				text-align: left;
 				position: sticky;
 				top: 0;
 				z-index: 10;
 			}
 			table td {
-				padding: 10px;
+				padding: 8px;
 				border-bottom: 1px solid #ddd;
 			}
 			table tr:hover {
@@ -141,19 +131,12 @@ async def get():
 				font-weight: bold;
 				color: #333;
 			}
-			.error {
-				color: #dc3545;
-				padding: 10px;
-				background: #f8d7da;
-				border-radius: 5px;
-				margin: 10px 0;
-			}
 		</style>
 	</head>
 	<body>
 		<div class="container">
-			<h1>📊 实时数据监控</h1>
-			<div id="status">🔌 正在连接...</div>
+			<h1>实时数据监控</h1>
+			<div id="status">连接中...</div>
 			
 			<div id="stats">
 				<div class="stat-box">
@@ -165,19 +148,13 @@ async def get():
 					<div class="value" id="row-count">0</div>
 				</div>
 				<div class="stat-box">
-					<label>数据列数</label>
-					<div class="value" id="col-count">0</div>
-				</div>
-				<div class="stat-box">
 					<label>接收条数</label>
 					<div class="value" id="msg-count">0</div>
 				</div>
 			</div>
 			
 			<div id="data-container">
-				<div style="text-align: center; padding: 40px; color: #999;">
-					等待数据...
-				</div>
+				<div style="text-align: center; padding: 40px; color: #999;">等待数据...</div>
 			</div>
 		</div>
 
@@ -185,7 +162,6 @@ async def get():
 			let ws;
 			let messageCount = 0;
 			let reconnectAttempts = 0;
-			const maxReconnectAttempts = 5;
 			
 			function connect() {
 				const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -194,8 +170,7 @@ async def get():
 				ws = new WebSocket(wsUrl);
 				
 				ws.onopen = function() {
-					console.log('WebSocket连接已建立');
-					document.getElementById('status').textContent = '✅ 已连接';
+					document.getElementById('status').textContent = '已连接';
 					document.getElementById('status').className = 'connected';
 					reconnectAttempts = 0;
 				};
@@ -206,25 +181,20 @@ async def get():
 						messageCount++;
 						updateUI(data);
 					} catch (e) {
-						console.error('解析数据失败:', e);
+						console.error('解析失败:', e);
 					}
 				};
 				
 				ws.onclose = function() {
-					console.log('WebSocket连接已关闭');
-					document.getElementById('status').textContent = '❌ 连接断开，尝试重连...';
+					document.getElementById('status').textContent = '断开，重连中...';
 					document.getElementById('status').className = 'disconnected';
 					
-					if (reconnectAttempts < maxReconnectAttempts) {
+					if (reconnectAttempts < 5) {
 						reconnectAttempts++;
 						setTimeout(connect, 3000 * reconnectAttempts);
 					} else {
-						document.getElementById('status').textContent = '❌ 连接失败，请刷新页面重试';
+						document.getElementById('status').textContent = '连接失败，请刷新';
 					}
-				};
-				
-				ws.onerror = function(error) {
-					console.error('WebSocket错误:', error);
 				};
 			}
 			
@@ -237,7 +207,6 @@ async def get():
 					
 					if (df.length > 0) {
 						document.getElementById('row-count').textContent = df.length;
-						document.getElementById('col-count').textContent = Object.keys(df[0]).length;
 					}
 					
 					if (df.length === 0) {
@@ -254,8 +223,7 @@ async def get():
 					});
 					html += '</tr></thead><tbody>';
 					
-					const displayData = df.slice(-50);
-					displayData.forEach(row => {
+					df.forEach(row => {
 						html += '<tr>';
 						columns.forEach(col => {
 							let value = row[col];
@@ -271,12 +239,6 @@ async def get():
 						html += '</tr>';
 					});
 					html += '</tbody></table>';
-					
-					if (df.length > 50) {
-						html += `<div style="margin-top: 10px; color: #666; font-size: 12px;">
-							显示最近50行（共${df.length}行）
-						</div>`;
-					}
 					
 					document.getElementById('data-container').innerHTML = html;
 				}
@@ -297,12 +259,10 @@ async def get():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-	# 第一步：声明使用全局变量（必须在函数最开始）
 	global latest_data
 	
 	await manager.connect(websocket)
 	try:
-		# 发送历史数据
 		if latest_data is not None:
 			await websocket.send_text(json.dumps({
 				"type": "dataframe",
@@ -310,43 +270,28 @@ async def websocket_endpoint(websocket: WebSocket):
 			}))
 		
 		while True:
-			# 接收来自客户端的消息
 			data = await websocket.receive_text()
 			try:
 				parsed = json.loads(data)
-				
-				# 如果是数据帧更新
 				if parsed.get("type") == "dataframe":
-					# 更新全局变量（不需要再声明global，因为已经在函数开头声明了）
 					latest_data = parsed.get("data", [])
-					# 广播给所有连接的浏览器客户端
 					await manager.broadcast(json.dumps({
 						"type": "dataframe",
 						"data": latest_data
 					}))
 				else:
-					# 其他类型的消息
 					await websocket.send_text(f"Received: {data}")
-					
-			except json.JSONDecodeError:
-				logger.error(f"Invalid JSON received: {data}")
-				await websocket.send_text("Error: Invalid JSON format")
+			except:
+				pass
 				
 	except WebSocketDisconnect:
 		manager.disconnect(websocket)
-	except Exception as e:
-		logger.error(f"WebSocket error: {e}")
+	except:
 		manager.disconnect(websocket)
 
-# 健康检查端点
 @app.get("/health")
 async def health():
 	return {"status": "healthy", "timestamp": datetime.now().isoformat()}
-
-# 测试端点
-@app.get("/test")
-async def test():
-	return {"status": "ok", "message": "Service is running"}
 
 if __name__ == "__main__":
 	uvicorn.run(app, host="0.0.0.0", port=10000)
