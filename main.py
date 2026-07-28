@@ -3,16 +3,11 @@ import json
 from datetime import datetime
 from typing import Set
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, FileResponse
 import uvicorn
 import os
 
 app = FastAPI()
-
-# 挂载静态文件目录（如果存在图标文件）
-if os.path.exists("redfox.ico"):
-	app.mount("/static", StaticFiles(directory="."), name="static")
 
 class ConnectionManager:
 	def __init__(self):
@@ -44,6 +39,16 @@ class ConnectionManager:
 manager = ConnectionManager()
 latest_data = None
 
+@app.get("/redfox.ico")
+async def get_icon():
+	"""提供图标文件"""
+	if os.path.exists("redfox.ico"):
+		return FileResponse("redfox.ico", media_type="image/x-icon")
+	else:
+		# 如果文件不存在，返回204 No Content
+		from fastapi.responses import Response
+		return Response(status_code=204)
+
 @app.get("/")
 async def get():
 	"""提供Web界面"""
@@ -53,6 +58,7 @@ async def get():
 	<head>
 		<title>Palmmicro</title>
 		<link rel="shortcut icon" href="/redfox.ico" type="image/x-icon">
+		<link rel="icon" href="/redfox.ico" type="image/x-icon">
 		<style>
 			body {
 				font-family: Arial, sans-serif;
