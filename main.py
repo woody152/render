@@ -286,7 +286,11 @@ async def get():
 							} else if (value === null || value === undefined) {
 								displayValue = '-';
 							} else if (typeof value === 'number') {
-								displayValue = value.toFixed(2);
+								if (Number.isInteger(value)) {
+									displayValue = value.toString();
+								} else {
+									displayValue = value.toFixed(2);
+								}
 							} else if (typeof value === 'object') {
 								displayValue = JSON.stringify(value);
 							} else {
