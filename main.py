@@ -45,33 +45,44 @@ async def get():
 	<!DOCTYPE html>
 	<html>
 	<head>
-		<title>实时数据监控</title>
+		<title>Palmmicro</title>
 		<style>
 			body {
 				font-family: Arial, sans-serif;
-				margin: 20px;
+				margin: 10px;
 				background: #f5f5f5;
 			}
 			.container {
-				max-width: 1200px;
+				max-width: 1400px;
 				margin: 0 auto;
 				background: white;
-				padding: 20px;
+				padding: 15px;
 				border-radius: 10px;
 				box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 			}
 			h1 {
 				color: #333;
+				font-size: 20px;
+				margin: 0 0 10px 0;
+				padding-bottom: 8px;
 				border-bottom: 2px solid #4CAF50;
-				padding-bottom: 10px;
+			}
+			.top-bar {
+				display: flex;
+				align-items: center;
+				gap: 20px;
+				margin-bottom: 10px;
+				flex-wrap: wrap;
 			}
 			#status {
-				padding: 10px;
-				margin: 10px 0;
+				padding: 6px 15px;
 				border-radius: 5px;
 				background: #e7f3fe;
 				color: #2196F3;
 				font-weight: bold;
+				font-size: 14px;
+				white-space: nowrap;
+				flex-shrink: 0;
 			}
 			#status.connected {
 				background: #d4edda;
@@ -81,29 +92,58 @@ async def get():
 				background: #f8d7da;
 				color: #721c24;
 			}
+			#stats {
+				display: flex;
+				gap: 15px;
+				flex-wrap: wrap;
+				flex: 1;
+			}
+			.stat-box {
+				background: #f8f9fa;
+				padding: 5px 15px;
+				border-radius: 5px;
+				border-left: 3px solid #4CAF50;
+				display: flex;
+				align-items: baseline;
+				gap: 8px;
+			}
+			.stat-box label {
+				font-weight: bold;
+				color: #666;
+				font-size: 11px;
+				text-transform: uppercase;
+			}
+			.stat-box .value {
+				font-size: 16px;
+				font-weight: bold;
+				color: #333;
+			}
 			#data-container {
-				margin-top: 20px;
+				margin-top: 5px;
 				overflow-x: auto;
-				max-height: 600px;
+				max-height: calc(100vh - 200px);
+				min-height: 400px;
 				overflow-y: auto;
 			}
 			table {
 				width: 100%;
 				border-collapse: collapse;
-				font-size: 14px;
+				font-size: 13px;
 			}
 			table th {
 				background: #4CAF50;
 				color: white;
-				padding: 10px;
+				padding: 8px 10px;
 				text-align: left;
 				position: sticky;
 				top: 0;
 				z-index: 10;
+				font-size: 13px;
 			}
 			table td {
-				padding: 8px;
+				padding: 6px 10px;
 				border-bottom: 1px solid #ddd;
+				font-size: 13px;
 			}
 			table tr:hover {
 				background: #f5f5f5;
@@ -111,55 +151,52 @@ async def get():
 			.bool-true {
 				color: #28a745;
 				font-weight: bold;
-				font-size: 18px;
+				font-size: 16px;
 			}
 			.bool-false {
 				color: #dc3545;
 				font-weight: bold;
-				font-size: 18px;
+				font-size: 16px;
 			}
-			#stats {
-				display: flex;
-				gap: 20px;
-				margin: 15px 0;
-				flex-wrap: wrap;
-			}
-			.stat-box {
-				background: #f8f9fa;
-				padding: 10px 20px;
-				border-radius: 5px;
-				border-left: 4px solid #4CAF50;
-			}
-			.stat-box label {
-				font-weight: bold;
-				color: #666;
-				font-size: 12px;
-				text-transform: uppercase;
-			}
-			.stat-box .value {
-				font-size: 20px;
-				font-weight: bold;
-				color: #333;
+			@media (max-width: 768px) {
+				.top-bar {
+					flex-direction: column;
+					align-items: stretch;
+				}
+				#stats {
+					justify-content: space-between;
+				}
+				.stat-box {
+					flex: 1;
+					min-width: 100px;
+				}
+				#data-container {
+					max-height: calc(100vh - 300px);
+					min-height: 300px;
+				}
 			}
 		</style>
 	</head>
 	<body>
 		<div class="container">
-			<h1>实时数据监控</h1>
-			<div id="status">连接中...</div>
+			<h1>企业微信消息实时汇总</h1>
 			
-			<div id="stats">
-				<div class="stat-box">
-					<label>最后更新</label>
-					<div class="value" id="last-update">-</div>
-				</div>
-				<div class="stat-box">
-					<label>数据行数</label>
-					<div class="value" id="row-count">0</div>
-				</div>
-				<div class="stat-box">
-					<label>接收条数</label>
-					<div class="value" id="msg-count">0</div>
+			<div class="top-bar">
+				<div id="status">连接中...</div>
+				
+				<div id="stats">
+					<div class="stat-box">
+						<label>最后更新</label>
+						<div class="value" id="last-update">-</div>
+					</div>
+					<div class="stat-box">
+						<label>数据行数</label>
+						<div class="value" id="row-count">0</div>
+					</div>
+					<div class="stat-box">
+						<label>接收条数</label>
+						<div class="value" id="msg-count">0</div>
+					</div>
 				</div>
 			</div>
 			
