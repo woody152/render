@@ -4,9 +4,15 @@ from datetime import datetime
 from typing import Set
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
+import os
 
 app = FastAPI()
+
+# 挂载静态文件目录（如果存在图标文件）
+if os.path.exists("redfox.ico"):
+	app.mount("/static", StaticFiles(directory="."), name="static")
 
 class ConnectionManager:
 	def __init__(self):
@@ -46,6 +52,7 @@ async def get():
 	<html>
 	<head>
 		<title>Palmmicro</title>
+		<link rel="shortcut icon" href="/redfox.ico" type="image/x-icon">
 		<style>
 			body {
 				font-family: Arial, sans-serif;
@@ -286,6 +293,7 @@ async def get():
 							} else if (value === null || value === undefined) {
 								displayValue = '-';
 							} else if (typeof value === 'number') {
+								// 判断是否为整数
 								if (Number.isInteger(value)) {
 									displayValue = value.toString();
 								} else {
